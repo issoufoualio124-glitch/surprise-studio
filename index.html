@@ -128,6 +128,66 @@ button.whatsapp {
   }
 }
 
+
+/* NOUVELLE ENVELOPPE MAGIQUE */
+#envelopeScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: radial-gradient(circle, #71365f, #170b22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+.envelope-card {
+  width: 100%;
+  max-width: 430px;
+  padding: 28px 20px;
+  border-radius: 25px;
+  background: linear-gradient(145deg,#ffe3ef,#e99abb);
+  color: #54203e;
+  box-shadow: 0 0 40px #ff8dc8;
+}
+.envelope {
+  font-size: 115px;
+  margin: 20px;
+  animation: envelopePulse 1.8s infinite;
+}
+@keyframes envelopePulse {
+  50% { transform: scale(1.10) rotate(3deg); }
+}
+.envelope-card h2 { color: #78234f; }
+.envelope-card button {
+  background: linear-gradient(90deg,#b82e77,#f36ba9);
+  color: white;
+}
+.magic-letter {
+  background: #fff0f5;
+  color: #55243f;
+  padding: 20px;
+  border-radius: 16px;
+  border: 2px solid #ffc1dc;
+  animation: letterAppear 1.5s ease both;
+}
+#customMessage { color: #55243f; }
+@keyframes letterAppear {
+  from { opacity: 0; transform: translateY(35px) scale(.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.firework {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  font-size: 35px;
+  animation: fireworkRise 2.5s ease-out forwards;
+}
+@keyframes fireworkRise {
+  0% { transform: translateY(100vh) scale(.3); opacity: 0; }
+  40% { opacity: 1; transform: translateY(30vh) scale(1.5); }
+  100% { opacity: 0; transform: translateY(0) scale(2); }
+}
+
 .hidden {
   display: none !important;
 }
@@ -138,12 +198,33 @@ button.whatsapp {
   margin: 30px 0;
 }
 </style>
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="💌 Une surprise pour toi !">
+<meta property="og:description" content="Quelqu'un t'a préparé une surprise spéciale. Ouvre ton enveloppe et découvre-la ❤️">
+<meta property="og:site_name" content="Surprise Studio">
+<meta name="description" content="Découvre une surprise personnalisée préparée spécialement pour toi.">
+
+<meta property="og:image" content="https://issoufoualio124-glitch.github.io/surprise-studio/envelope-preview.png">
 </head>
 
 <body>
 
 <h1>✨ SURPRISE STUDIO ✨</h1>
 <p class="subtitle">Crée des surprises inoubliables ❤️</p>
+
+
+<div id="envelopeScreen" class="hidden">
+  <div class="envelope-card">
+    <div style="font-size:35px">💌</div>
+    <h2>Une surprise pour toi !</h2>
+    <div class="envelope">💌</div>
+    <h2 id="envelopeName">Quelqu'un pense à toi ❤️</h2>
+    <p>Une personne spéciale t'a préparé quelque chose de merveilleux...</p>
+    <button onclick="openEnvelope()">💌 CLIQUE POUR VOIR LA SURPRISE</button>
+    <p style="font-size:13px">Une petite magie t'attend ✨</p>
+  </div>
+</div>
 
 <div class="panel" id="editor">
 
@@ -185,8 +266,9 @@ button.whatsapp {
   <div id="emoji">🎂</div>
   <h2 id="title"></h2>
   <h2 id="greeting"></h2>
-  <p id="customMessage"></p>
+  <div class="magic-letter"><p id="customMessage"></p></div>
   <h2 id="ending">❤️✨❤️</h2>
+  <button class="secondary" onclick="specialEffects()">🎆 RELANCER LES EFFETS MAGIQUES</button>
 </div>
 
 <div class="panel hidden" id="actions">
@@ -323,7 +405,7 @@ function makeShareLink() {
 
   const encoded = encodeURIComponent(JSON.stringify(data));
 
-  return location.origin + location.pathname + "#s=" + encoded;
+  return "https://issoufoualio124-glitch.github.io/surprise-studio/" + "#s=" + encoded;
 }
 
 // Partage classique
@@ -365,7 +447,7 @@ function shareWhatsApp() {
   if (!link) return;
 
   const text = encodeURIComponent(
-    "🎁 J'ai préparé une surprise spéciale pour toi ❤️\nDécouvre-la ici : " + link
+    "💌 Une surprise spéciale t’attend ! ❤️\nOuvre ton enveloppe ici : " + link
   );
 
   window.open(
@@ -375,12 +457,12 @@ function shareWhatsApp() {
 }
 
 // Lecture d'une surprise reçue
+
 function loadSharedSurprise() {
   if (!location.hash.startsWith("#s=")) return;
 
   try {
     const encoded = location.hash.substring(3);
-
     const data = JSON.parse(decodeURIComponent(encoded));
 
     if (!data.name ||
@@ -389,19 +471,41 @@ function loadSharedSurprise() {
       throw new Error("Données invalides");
     }
 
-    $("type").value = data.type;
-    $("name").value = data.name;
-    $("heading").value = data.heading || "";
-    $("message").value = data.message || "";
-    $("theme").value = data.theme;
-
+    currentData = data;
     $("editor").classList.add("hidden");
-
-    createSurprise(data);
+    $("preview").style.display = "none";
+    $("actions").classList.add("hidden");
+    $("envelopeName").textContent = data.name + " ❤️";
+    $("envelopeScreen").classList.remove("hidden");
 
   } catch (error) {
     alert("Ce lien de surprise est invalide ou endommagé.");
   }
+}
+
+function openEnvelope() {
+  if (!currentData) return;
+
+  $("envelopeScreen").classList.add("hidden");
+  createSurprise(currentData);
+
+  setTimeout(specialEffects, 500);
+}
+
+function specialEffects() {
+  const symbols = ["❤️", "💖", "💕", "✨", "🎆", "🌹", "⭐"];
+
+  for (let i = 0; i < 45; i++) {
+    const item = document.createElement("div");
+    item.className = "firework";
+    item.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    item.style.left = Math.random() * 95 + "vw";
+    item.style.animationDelay = Math.random() * 1.5 + "s";
+    document.body.appendChild(item);
+    setTimeout(() => item.remove(), 4500);
+  }
+
+  confetti();
 }
 
 // Exportation vidéo WebM
