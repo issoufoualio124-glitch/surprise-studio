@@ -25,14 +25,17 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Prepare web application
         run: |
           npm init -y
           npm install @capacitor/core@6.2.1 @capacitor/cli@6.2.1 @capacitor/android@6.2.1
-          mkdir www
+          mkdir -p www
           cp index.html www/index.html
           npx cap init SurpriseStudio com.issoufou.surprisestudio --web-dir=www
           npx cap add android
