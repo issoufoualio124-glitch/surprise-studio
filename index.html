@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#100b19">
+<title>Surprise Studio</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  min-height: 100vh;
+  background: #100b19;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+h1 {
+  color: #f5cf81;
+  font-size: 27px;
+}
+
+.subtitle {
+  color: #d6c5dc;
+}
+
+.panel, #preview {
+  max-width: 500px;
+  margin: 22px auto;
+  padding: 22px;
+  background: #21152b;
+  border-radius: 18px;
+  box-shadow: 0 0 25px #63366d;
+}
+
+label {
+  display: block;
+  text-align: left;
+  margin: 15px 0 7px;
+  color: #f5cf81;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #76517d;
+  border-radius: 9px;
+  background: #120d19;
+  color: white;
+  font-size: 16px;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+button {
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  border: none;
+  border-radius: 30px;
+  background: linear-gradient(90deg,#d99b35,#ffe6a1);
+  color: #28132a;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #563465;
+  color: white;
+  border: 1px solid #a778b6;
+}
+
+button.whatsapp {
+  background: #128c4a;
+  color: white;
+}
+
+#preview {
+  display: none;
+  min-height: 380px;
+  padding: 30px 18px;
+  background: linear-gradient(145deg,#54145d,#170b2a);
+  overflow-wrap: anywhere;
+}
+
+#emoji {
+  font-size: 85px;
+  margin: 20px 0;
+}
+
+#preview h2 {
+  color: #ffe1a0;
+  font-size: 27px;
+}
+
+#preview p {
+  font-size: 19px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+#ending {
+  margin-top: 30px;
+}
+
+.confetti {
+  position: fixed;
+  top: -35px;
+  z-index: 10;
+  pointer-events: none;
+  animation: fall 4s linear forwards;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.hidden {
+  display: none !important;
+}
+
+.footer {
+  color: #a995b4;
+  font-size: 12px;
+  margin: 30px 0;
+}
+</style>
+</head>
+
+<body>
+
+<h1>✨ SURPRISE STUDIO ✨</h1>
+<p class="subtitle">Crée des surprises inoubliables ❤️</p>
+
+<div class="panel" id="editor">
+
+  <label>TYPE DE SURPRISE</label>
+  <select id="type">
+    <option value="birthday">🎂 Birthday Surprise</option>
+    <option value="morning">🌅 Morning Surprise</option>
+    <option value="evening">🌙 Evening Surprise</option>
+  </select>
+
+  <label>PRÉNOM DU DESTINATAIRE</label>
+  <input id="name" maxlength="40"
+    placeholder="Exemple : Aïcha">
+
+  <label>TITRE PERSONNALISÉ (FACULTATIF)</label>
+  <input id="heading" maxlength="80"
+    placeholder="Exemple : Une journée magique">
+
+  <label>TON MESSAGE PERSONNALISÉ</label>
+  <textarea id="message" maxlength="700"
+    placeholder="Écris ton propre message ici..."></textarea>
+
+  <label>COULEUR DE LA SURPRISE</label>
+  <select id="theme">
+    <option value="purple">Violet magique</option>
+    <option value="pink">Rose romantique</option>
+    <option value="blue">Bleu élégant</option>
+    <option value="gold">Or luxueux</option>
+    <option value="black">Noir mystérieux</option>
+  </select>
+
+  <button onclick="createSurprise()">
+    ✨ CRÉER MA SURPRISE
+  </button>
+
+</div>
+
+<div id="preview">
+  <div id="emoji">🎂</div>
+  <h2 id="title"></h2>
+  <h2 id="greeting"></h2>
+  <p id="customMessage"></p>
+  <h2 id="ending">❤️✨❤️</h2>
+</div>
+
+<div class="panel hidden" id="actions">
+
+  <button class="secondary" onclick="shareSurprise()">
+    🔗 PARTAGER MA SURPRISE
+  </button>
+
+  <button class="whatsapp" onclick="shareWhatsApp()">
+    💚 ENVOYER SUR WHATSAPP
+  </button>
+
+  <button class="secondary" onclick="downloadVideo()">
+    🎬 TÉLÉCHARGER EN VIDÉO
+  </button>
+
+  <button class="secondary" onclick="resetApp()">
+    ↩️ CRÉER UNE AUTRE SURPRISE
+  </button>
+
+</div>
+
+<p class="footer">SURPRISE STUDIO © 2026</p>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+
+const themes = {
+  purple: ["#54145d", "#170b2a"],
+  pink: ["#a82c68", "#38132f"],
+  blue: ["#145477", "#101c38"],
+  gold: ["#80601c", "#21172c"],
+  black: ["#34313c", "#080808"]
+};
+
+const categories = {
+  birthday: ["🎁", "Joyeux anniversaire"],
+  morning: ["☀️", "Bonjour"],
+  evening: ["🌹", "Bonsoir"]
+};
+
+let currentData = null;
+
+function getSurpriseData() {
+  return {
+    type: $("type").value,
+    name: $("name").value.trim(),
+    heading: $("heading").value.trim(),
+    message: $("message").value.trim(),
+    theme: $("theme").value
+  };
+}
+
+function createSurprise(data = null) {
+  const info = data || getSurpriseData();
+
+  if (!info.name) {
+    alert("Entre d'abord le prénom du destinataire !");
+    return;
+  }
+
+  if (!categories[info.type] || !themes[info.theme]) {
+    alert("Les paramètres de cette surprise sont invalides.");
+    return;
+  }
+
+  currentData = info;
+
+  $("title").textContent =
+    info.heading || categories[info.type][1];
+
+  $("emoji").textContent = categories[info.type][0];
+
+  $("greeting").textContent =
+    categories[info.type][1] + " " + info.name + " !";
+
+  $("customMessage").textContent =
+    info.message || "Tu mérites tout le bonheur du monde ❤️";
+
+  $("preview").style.background =
+    `linear-gradient(145deg, ${themes[info.theme][0]}, ${themes[info.theme][1]})`;
+
+  $("preview").style.display = "block";
+  $("actions").classList.remove("hidden");
+
+  // Interface différente pour le destinataire
+  const isRecipient = location.hash.startsWith("#s=");
+  const buttons = $("actions").querySelectorAll("button");
+
+  buttons[0].style.display = isRecipient ? "none" : "";
+  buttons[1].style.display = isRecipient ? "none" : "";
+  buttons[2].style.display = "";
+  buttons[3].style.display = isRecipient ? "none" : "";
+
+  $("preview").scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+
+  confetti();
+}
+
+function confetti() {
+  const symbols = ["✨", "❤️", "🎉", "🌹", "💖", "⭐"];
+
+  for (let i = 0; i < 65; i++) {
+    const item = document.createElement("div");
+
+    item.className = "confetti";
+    item.textContent =
+      symbols[Math.floor(Math.random() * symbols.length)];
+
+    item.style.left = Math.random() * 100 + "vw";
+    item.style.animationDelay = Math.random() * 2 + "s";
+    item.style.fontSize =
+      (15 + Math.random() * 20) + "px";
+
+    document.body.appendChild(item);
+
+    setTimeout(() => item.remove(), 6500);
+  }
+}
+
+// Création d'un lien de surprise
+function makeShareLink() {
+  const data = currentData || getSurpriseData();
+
+  if (!data.name) {
+    alert("Entre le prénom du destinataire !");
+    return null;
+  }
+
+  const encoded = encodeURIComponent(JSON.stringify(data));
+
+  return location.origin + location.pathname + "#s=" + encoded;
+}
+
+// Partage classique
+async function shareSurprise() {
+  const link = makeShareLink();
+
+  if (!link) return;
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: "Une surprise pour toi ❤️",
+        text: "J'ai préparé une surprise spéciale pour toi !",
+        url: link
+      });
+    } else {
+      await copyLink(link);
+    }
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      prompt("Copie ton lien ici :", link);
+    }
+  }
+}
+
+async function copyLink(link) {
+  try {
+    await navigator.clipboard.writeText(link);
+    alert("Lien copié ! Tu peux l'envoyer à tes amis.");
+  } catch (error) {
+    prompt("Copie ton lien de surprise :", link);
+  }
+}
+
+// Partage WhatsApp
+function shareWhatsApp() {
+  const link = makeShareLink();
+
+  if (!link) return;
+
+  const text = encodeURIComponent(
+    "🎁 J'ai préparé une surprise spéciale pour toi ❤️\nDécouvre-la ici : " + link
+  );
+
+  window.open(
+    "https://wa.me/?text=" + text,
+    "_blank"
+  );
+}
+
+// Lecture d'une surprise reçue
+function loadSharedSurprise() {
+  if (!location.hash.startsWith("#s=")) return;
+
+  try {
+    const encoded = location.hash.substring(3);
+
+    const data = JSON.parse(decodeURIComponent(encoded));
+
+    if (!data.name ||
+        !categories[data.type] ||
+        !themes[data.theme]) {
+      throw new Error("Données invalides");
+    }
+
+    $("type").value = data.type;
+    $("name").value = data.name;
+    $("heading").value = data.heading || "";
+    $("message").value = data.message || "";
+    $("theme").value = data.theme;
+
+    $("editor").classList.add("hidden");
+
+    createSurprise(data);
+
+  } catch (error) {
+    alert("Ce lien de surprise est invalide ou endommagé.");
+  }
+}
+
+// Exportation vidéo WebM
+async function downloadVideo() {
+  const data = currentData || getSurpriseData();
+
+  if (!data.name) {
+    alert("Entre d'abord le prénom du destinataire !");
+    return;
+  }
+
+  if (!window.MediaRecorder ||
+      !HTMLCanvasElement.prototype.captureStream) {
+    alert("L'exportation vidéo n'est pas disponible sur ce navigateur.");
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 720;
+  canvas.height = 1280;
+
+  const ctx = canvas.getContext("2d");
+
+  const stream = canvas.captureStream(30);
+
+  const mime = [
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm"
+  ].find(type => MediaRecorder.isTypeSupported(type));
+
+  if (!mime) {
+    alert("Format vidéo non disponible.");
+    stream.getTracks().forEach(track => track.stop());
+    return;
+  }
+
+  const chunks = [];
+
+  const recorder = new MediaRecorder(stream, {
+    mimeType: mime
+  });
+
+  recorder.ondataavailable = event => {
+    if (event.data.size > 0) {
+      chunks.push(event.data);
+    }
+  };
+
+  recorder.onerror = () => {
+    stream.getTracks().forEach(track => track.stop());
+    alert("Une erreur est survenue pendant l'exportation.");
+  };
+
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "surprise-" +
+      data.name.replace(/[^a-z0-9_-]/gi, "_") + ".webm";
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+    stream.getTracks().forEach(track => track.stop());
+
+    alert("Ta vidéo est prête ! 🎉");
+  };
+
+  const colors = themes[data.theme];
+  const category = categories[data.type];
+
+  const title = data.heading || category[1];
+  const greeting = category[1] + " " + data.name + " !";
+  const message = data.message ||
+    "Tu mérites tout le bonheur du monde ❤️";
+
+  const particles = Array.from({length: 30}, () => ({
+    x: Math.random() * 720,
+    y: Math.random() * 1280,
+    size: 2 + Math.random() * 7
+  }));
+
+  function drawText(text, x, y, maxWidth, lineHeight) {
+    const words = text.split(/\s+/);
+    let line = "";
+
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, x, y);
+        line = word;
+        y += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+
+    if (line) ctx.fillText(line, x, y);
+  }
+
+  let frame = 0;
+
+  function draw() {
+    const gradient = ctx.createLinearGradient(0, 0, 720, 1280);
+
+    gradient.addColorStop(0, colors[0]);
+    gradient.addColorStop(1, colors[1]);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 720, 1280);
+
+    // Particules lumineuses
+    ctx.fillStyle = "#ffe6a1";
+
+    for (const p of particles) {
+      const y = (p.y + frame * 1.2) % 1280;
+
+      ctx.globalAlpha = 0.25 + Math.random() * 0.55;
+      ctx.beginPath();
+      ctx.arc(p.x, y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "center";
+
+    ctx.fillStyle = "#ffe4a6";
+    ctx.font = "bold 45px Arial";
+    ctx.fillText("SURPRISE STUDIO", 360, 145);
+
+    ctx.font = "115px Arial";
+    ctx.fillText(category[0], 360, 350);
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 45px Arial";
+    drawText(title, 360, 510, 620, 60);
+
+    ctx.fillStyle = "#ffe4a6";
+    ctx.font = "bold 37px Arial";
+    drawText(greeting, 360, 650, 620, 55);
+
+    ctx.fillStyle = "white";
+    ctx.font = "31px Arial";
+    drawText(message, 360, 790, 620, 50);
+
+    ctx.fillStyle = "#ffe4a6";
+    ctx.font = "55px Arial";
+    ctx.fillText("❤️ ✨ ❤️", 360, 1120);
+
+    frame++;
+
+    if (frame < 240) {
+      requestAnimationFrame(draw);
+    } else {
+      recorder.stop();
+    }
+  }
+
+  recorder.start();
+  draw();
+}
+
+// Nouvelle surprise
+function resetApp() {
+  currentData = null;
+
+  $("type").value = "birthday";
+  $("name").value = "";
+  $("heading").value = "";
+  $("message").value = "";
+  $("theme").value = "purple";
+
+  $("preview").style.display = "none";
+  $("actions").classList.add("hidden");
+  $("editor").classList.remove("hidden");
+
+  history.replaceState(
+    null,
+    "",
+    location.pathname + location.search
+  );
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+window.addEventListener("load", loadSharedSurprise);
+</script>
+
+</body>
+</html>
