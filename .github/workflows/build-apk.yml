@@ -1,0 +1,51 @@
+name: Build Surprise Studio APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare web application
+        run: |
+          npm init -y
+          npm install @capacitor/core@6.2.1 @capacitor/cli@6.2.1 @capacitor/android@6.2.1
+          mkdir www
+          cp index.html www/index.html
+          npx cap init SurpriseStudio com.issoufou.surprisestudio --web-dir=www
+          npx cap add android
+          npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Surprise-Studio-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
