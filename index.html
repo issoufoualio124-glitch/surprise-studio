@@ -457,7 +457,7 @@ async function makeShareLink() {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-    return location.origin + location.pathname + "?s=" + docRef.id;
+    return "https://surprise-studio-preview.issoufoualio113.workers.dev/?s=" + docRef.id;
 
   } catch (error) {
     console.error("Erreur Firebase :", error);
