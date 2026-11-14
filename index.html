@@ -293,6 +293,40 @@ button.whatsapp {
 
 <p class="footer">SURPRISE STUDIO © 2026</p>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<script>
+const surpriseFirebaseConfig = {
+  apiKey: "AIzaSyDGnT_g91YpkpYEj-xbB87Q9iGG6EXGyoQ",
+  authDomain: "surprise-studio-58f5f.firebaseapp.com",
+  projectId: "surprise-studio-58f5f",
+  storageBucket: "surprise-studio-58f5f.firebasestorage.app",
+  messagingSenderId: "730844491863",
+  appId: "1:730844491863:web:42a0477ba9018dd1cc7312"
+};
+
+firebase.initializeApp(surpriseFirebaseConfig);
+
+const surpriseFirebaseAuth = firebase.auth();
+const surpriseFirebaseDB = firebase.firestore();
+
+const surpriseFirebaseReady = new Promise((resolve, reject) => {
+  const unsubscribe = surpriseFirebaseAuth.onAuthStateChanged(user => {
+    unsubscribe();
+
+    if (user) {
+      resolve(user);
+    } else {
+      surpriseFirebaseAuth.signInAnonymously()
+        .then(result => resolve(result.user))
+        .catch(reject);
+    }
+  }, reject);
+});
+</script>
+
 <script>
 "use strict";
 
@@ -357,7 +391,7 @@ function createSurprise(data = null) {
   $("actions").classList.remove("hidden");
 
   // Interface différente pour le destinataire
-  const isRecipient = location.hash.startsWith("#s=");
+  const isRecipient = location.hash.startsWith("#s=") || new URLSearchParams(location.search).has("s");
   const buttons = $("actions").querySelectorAll("button");
 
   buttons[0].style.display = isRecipient ? "none" : "";
@@ -394,8 +428,8 @@ function confetti() {
   }
 }
 
-// Création d'un lien de surprise
-function makeShareLink() {
+// Création d'un lien court avec Firebase
+async function makeShareLink() {
   const data = currentData || getSurpriseData();
 
   if (!data.name) {
@@ -403,14 +437,38 @@ function makeShareLink() {
     return null;
   }
 
-  const encoded = encodeURIComponent(JSON.stringify(data));
+  if (!categories[data.type] || !themes[data.theme]) {
+    alert("Les paramètres de cette surprise sont invalides.");
+    return null;
+  }
 
-  return "https://issoufoualio124-glitch.github.io/surprise-studio/" + "#s=" + encoded;
+  try {
+    const user = await surpriseFirebaseReady;
+
+    const docRef = await surpriseFirebaseDB
+      .collection("surprises")
+      .add({
+        name: data.name,
+        type: data.type,
+        heading: data.heading || "",
+        message: data.message || "",
+        theme: data.theme,
+        ownerUid: user.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    return location.origin + location.pathname + "?s=" + docRef.id;
+
+  } catch (error) {
+    console.error("Erreur Firebase :", error);
+    alert("Impossible d'enregistrer la surprise. Vérifie ta connexion et les règles Firestore.");
+    return null;
+  }
 }
 
 // Partage classique
 async function shareSurprise() {
-  const link = makeShareLink();
+  const link = await makeShareLink();
 
   if (!link) return;
 
@@ -441,8 +499,8 @@ async function copyLink(link) {
 }
 
 // Partage WhatsApp
-function shareWhatsApp() {
-  const link = makeShareLink();
+async function shareWhatsApp() {
+  const link = await makeShareLink();
 
   if (!link) return;
 
@@ -457,13 +515,34 @@ function shareWhatsApp() {
 }
 
 // Lecture d'une surprise reçue
-
-function loadSharedSurprise() {
-  if (!location.hash.startsWith("#s=")) return;
+async function loadSharedSurprise() {
+  const params = new URLSearchParams(location.search);
+  const shortId = params.get("s");
 
   try {
-    const encoded = location.hash.substring(3);
-    const data = JSON.parse(decodeURIComponent(encoded));
+    let data;
+
+    if (shortId) {
+      await surpriseFirebaseReady;
+
+      const doc = await surpriseFirebaseDB
+        .collection("surprises")
+        .doc(shortId)
+        .get();
+
+      if (!doc.exists) {
+        throw new Error("Surprise introuvable");
+      }
+
+      data = doc.data();
+
+    } else if (location.hash.startsWith("#s=")) {
+      const encoded = location.hash.substring(3);
+      data = JSON.parse(decodeURIComponent(encoded));
+
+    } else {
+      return;
+    }
 
     if (!data.name ||
         !categories[data.type] ||
@@ -471,7 +550,14 @@ function loadSharedSurprise() {
       throw new Error("Données invalides");
     }
 
-    currentData = data;
+    currentData = {
+      type: data.type,
+      name: data.name,
+      heading: data.heading || "",
+      message: data.message || "",
+      theme: data.theme
+    };
+
     $("editor").classList.add("hidden");
     $("preview").style.display = "none";
     $("actions").classList.add("hidden");
@@ -479,7 +565,8 @@ function loadSharedSurprise() {
     $("envelopeScreen").classList.remove("hidden");
 
   } catch (error) {
-    alert("Ce lien de surprise est invalide ou endommagé.");
+    console.error("Erreur de chargement :", error);
+    alert("Cette surprise est introuvable ou le lien est invalide. Vérifie ta connexion Internet.");
   }
 }
 
